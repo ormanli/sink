@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/fortytw2/leaktest"
 	"github.com/golang/mock/gomock"
 	"github.com/ormanli/sink"
 	"github.com/stretchr/testify/require"
@@ -22,6 +23,7 @@ type dummy struct {
 }
 
 func Test_100ItemsIn10Batches(t *testing.T) {
+	defer leaktest.CheckTimeout(t, 5*time.Second)()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -43,6 +45,7 @@ func Test_100ItemsIn10Batches(t *testing.T) {
 	})
 
 	require.NoError(t, err)
+	defer s.Close()
 
 	var g errgroup.Group
 
@@ -60,6 +63,7 @@ func Test_100ItemsIn10Batches(t *testing.T) {
 }
 
 func Test_ErrorFromExpensiveOperation(t *testing.T) {
+	defer leaktest.CheckTimeout(t, 5*time.Second)()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -80,6 +84,7 @@ func Test_ErrorFromExpensiveOperation(t *testing.T) {
 	})
 
 	require.NoError(t, err)
+	defer s.Close()
 
 	var g errgroup.Group
 

@@ -77,6 +77,10 @@ func (s *Sink) Add(value interface{}) (interface{}, error) {
 // Close closes sink to stop processing.
 func (s *Sink) Close() {
 	close(s.input)
+
+	s.addPool.Release()
+	s.expensivePool.Release()
+	s.callbackPool.Release()
 }
 
 func (s *Sink) addFunc(i interface{}) {
