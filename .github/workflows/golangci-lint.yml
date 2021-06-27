@@ -1,9 +1,9 @@
 name: golangci-lint
 on:
   push:
-    branches:
-      - master
+    branches: [ master ]
   pull_request:
+    branches: [ master ]
 jobs:
   golangci:
     name: lint
@@ -14,6 +14,3 @@ jobs:
         uses: golangci/golangci-lint-action@v2
         with:
           version: latest
-
-          # Optional: golangci-lint command line arguments.
-          args: --issues-exit-code=0 --disable-all -E golint,gofmt,bodyclose,gosimple,prealloc --exclude-use-default=false

@@ -8,7 +8,7 @@ var (
 	// ErrNilExpensiveOperation is an error.
 	ErrNilExpensiveOperation = errors.New("there is not expensive operation")
 	// ErrInvalidMaxTimeoutForBatching is an error.
-	ErrInvalidMaxTimeoutForBatching = errors.New("max timeout for matching must be more than zero")
+	ErrInvalidMaxTimeoutForBatching = errors.New("max timeout for matching must be more than 1 millisecond")
 	// ErrInvalidAddPoolSize is an error.
 	ErrInvalidAddPoolSize = errors.New("add pool size must be more than zero")
 	// ErrInvalidCallbackPoolSize is an error.

@@ -33,7 +33,7 @@ func Test_ConfigValidation(t *testing.T) {
 					return nil, nil
 				},
 			},
-			errString: "max timeout for matching must be more than zero",
+			errString: "max timeout for matching must be more than 1 millisecond",
 		},
 		{
 			name: "AddPoolSize",

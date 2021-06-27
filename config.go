@@ -24,7 +24,7 @@ func validateConfig(config Config) error {
 		return ErrNilExpensiveOperation
 	}
 
-	if config.MaxTimeoutForBatching.String() == "0s" {
+	if config.MaxTimeoutForBatching < time.Millisecond {
 		return ErrInvalidMaxTimeoutForBatching
 	}
 

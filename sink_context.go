@@ -7,7 +7,8 @@ import (
 	"github.com/panjf2000/ants/v2"
 )
 
-// Sink is a struct to process different request simultaneously.
+// SinkWithContext is a struct to process different request simultaneously.
+//nolint:golint
 type SinkWithContext struct {
 	input         chan request
 	addPool       *ants.PoolWithFunc
@@ -16,8 +17,8 @@ type SinkWithContext struct {
 	logger        Logger
 }
 
-// NewSink initializes a sink with the provided config.
-func NewSinkWithContext(ctx context.Context, config Config) (*Sink, error) {
+// NewSinkWithContext initializes a sink with the provided config and context.
+func NewSinkWithContext(ctx context.Context, config Config) (*SinkWithContext, error) {
 	err := validateConfig(config)
 	if err != nil {
 		return nil, err
@@ -27,7 +28,7 @@ func NewSinkWithContext(ctx context.Context, config Config) (*Sink, error) {
 		config.Logger = standardLogger{}
 	}
 
-	s := &Sink{logger: config.Logger}
+	s := &SinkWithContext{logger: config.Logger}
 	s.input = make(chan request)
 
 	options := []ants.Option{ants.WithLogger(config.Logger)}
