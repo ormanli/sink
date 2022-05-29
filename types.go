@@ -1,21 +1,21 @@
 package sink
 
-type request struct {
-	value    interface{}
-	callback chan response
+type request[I, O any] struct {
+	value    I
+	callback chan response[O]
 }
 
-type response struct {
-	callback chan response
-	value    interface{}
+type response[O any] struct {
+	callback chan response[O]
+	value    O
 	err      error
 }
 
-func newItem(value interface{}) request {
-	return request{
+func newItem[I, O any](value I) request[I, O] {
+	return request[I, O]{
 		value:    value,
-		callback: make(chan response),
+		callback: make(chan response[O]),
 	}
 }
 
-type expensiveOperation func([]interface{}) ([]interface{}, error)
+type expensiveOperation[I, O any] func([]I) ([]O, error)

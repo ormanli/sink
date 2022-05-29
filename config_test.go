@@ -10,26 +10,26 @@ import (
 func Test_ConfigValidation(t *testing.T) {
 	tests := []struct {
 		name      string
-		c         Config
+		c         Config[any, any]
 		errString string
 	}{
 		{
 			name:      "MaxItemsForBatching",
-			c:         Config{},
+			c:         Config[any, any]{},
 			errString: "max items for batching must be more than zero",
 		},
 		{
 			name: "ExpensiveOperation",
-			c: Config{
+			c: Config[any, any]{
 				MaxItemsForBatching: 1,
 			},
 			errString: "there is not expensive operation",
 		},
 		{
 			name: "MaxTimeoutForBatching",
-			c: Config{
+			c: Config[any, any]{
 				MaxItemsForBatching: 1,
-				ExpensiveOperation: func(i []interface{}) ([]interface{}, error) {
+				ExpensiveOperation: func(i []any) ([]any, error) {
 					return nil, nil
 				},
 			},
@@ -37,9 +37,9 @@ func Test_ConfigValidation(t *testing.T) {
 		},
 		{
 			name: "AddPoolSize",
-			c: Config{
+			c: Config[any, any]{
 				MaxItemsForBatching: 1,
-				ExpensiveOperation: func(i []interface{}) ([]interface{}, error) {
+				ExpensiveOperation: func(i []any) ([]any, error) {
 					return nil, nil
 				},
 				MaxTimeoutForBatching: time.Millisecond,
@@ -48,9 +48,9 @@ func Test_ConfigValidation(t *testing.T) {
 		},
 		{
 			name: "CallbackPoolSize",
-			c: Config{
+			c: Config[any, any]{
 				MaxItemsForBatching: 1,
-				ExpensiveOperation: func(i []interface{}) ([]interface{}, error) {
+				ExpensiveOperation: func(i []any) ([]any, error) {
 					return nil, nil
 				},
 				MaxTimeoutForBatching: time.Millisecond,
@@ -60,9 +60,9 @@ func Test_ConfigValidation(t *testing.T) {
 		},
 		{
 			name: "ExpensivePoolSize",
-			c: Config{
+			c: Config[any, any]{
 				MaxItemsForBatching: 1,
-				ExpensiveOperation: func(i []interface{}) ([]interface{}, error) {
+				ExpensiveOperation: func(i []any) ([]any, error) {
 					return nil, nil
 				},
 				MaxTimeoutForBatching: time.Millisecond,
@@ -73,9 +73,9 @@ func Test_ConfigValidation(t *testing.T) {
 		},
 		{
 			name: "Valid",
-			c: Config{
+			c: Config[any, any]{
 				MaxItemsForBatching: 1,
-				ExpensiveOperation: func(i []interface{}) ([]interface{}, error) {
+				ExpensiveOperation: func(i []any) ([]any, error) {
 					return nil, nil
 				},
 				MaxTimeoutForBatching: time.Millisecond,

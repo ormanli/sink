@@ -7,8 +7,8 @@ import (
 )
 
 // Sink is a struct to process different request simultaneously.
-type Sink struct {
-	input         chan request
+type Sink[I, O any] struct {
+	input         chan request[I, O]
 	addPool       *ants.PoolWithFunc
 	callbackPool  *ants.PoolWithFunc
 	expensivePool *ants.PoolWithFunc
@@ -16,7 +16,7 @@ type Sink struct {
 }
 
 // NewSink initializes a sink with the provided config.
-func NewSink(config Config) (*Sink, error) {
+func NewSink[I, O any](config Config[I, O]) (*Sink[I, O], error) {
 	err := validateConfig(config)
 	if err != nil {
 		return nil, err
@@ -26,8 +26,8 @@ func NewSink(config Config) (*Sink, error) {
 		config.Logger = standardLogger{}
 	}
 
-	s := &Sink{logger: config.Logger}
-	s.input = make(chan request)
+	s := &Sink[I, O]{logger: config.Logger}
+	s.input = make(chan request[I, O])
 
 	options := []ants.Option{ants.WithLogger(config.Logger)}
 
@@ -48,7 +48,7 @@ func NewSink(config Config) (*Sink, error) {
 
 	batches := batch(s.input, config.MaxItemsForBatching, config.MaxTimeoutForBatching)
 
-	go func(batches chan []request) {
+	go func(batches chan []request[I, O]) {
 		for batch := range batches {
 			err := s.expensivePool.Invoke(batch)
 			if err != nil {
@@ -61,12 +61,13 @@ func NewSink(config Config) (*Sink, error) {
 }
 
 // Add adds a value to the sink and waits for result.
-func (s *Sink) Add(value interface{}) (interface{}, error) {
-	rqs := newItem(value)
+func (s *Sink[I, O]) Add(value I) (O, error) {
+	rqs := newItem[I, O](value)
 
 	err := s.addPool.Invoke(rqs)
 	if err != nil {
-		return nil, err
+		var result O
+		return result, err
 	}
 
 	rsp := <-rqs.callback
@@ -75,7 +76,7 @@ func (s *Sink) Add(value interface{}) (interface{}, error) {
 }
 
 // Close closes sink to stop processing.
-func (s *Sink) Close() {
+func (s *Sink[I, O]) Close() {
 	close(s.input)
 
 	s.addPool.Release()
@@ -83,25 +84,25 @@ func (s *Sink) Close() {
 	s.callbackPool.Release()
 }
 
-func (s *Sink) addFunc(i interface{}) {
-	rq := i.(request)
+func (s *Sink[I, O]) addFunc(i interface{}) {
+	rq := i.(request[I, O])
 
 	s.input <- rq
 }
 
-func (s *Sink) callbackFunc(i interface{}) {
-	drsp := i.(response)
+func (s *Sink[I, O]) callbackFunc(i interface{}) {
+	drsp := i.(response[O])
 
 	drsp.callback <- drsp
 
 	close(drsp.callback)
 }
 
-func (s *Sink) expensiveWrapper(f expensiveOperation) func(i interface{}) {
+func (s *Sink[I, O]) expensiveWrapper(f expensiveOperation[I, O]) func(i interface{}) {
 	return func(i interface{}) {
-		batch := i.([]request)
+		batch := i.([]request[I, O])
 
-		values := make([]interface{}, len(batch))
+		values := make([]I, len(batch))
 		for k := range values {
 			values[k] = batch[k].value
 		}
@@ -109,7 +110,7 @@ func (s *Sink) expensiveWrapper(f expensiveOperation) func(i interface{}) {
 		responses, err := f(values)
 
 		for k := range responses {
-			r := response{
+			r := response[O]{
 				callback: batch[k].callback,
 			}
 
@@ -127,14 +128,14 @@ func (s *Sink) expensiveWrapper(f expensiveOperation) func(i interface{}) {
 	}
 }
 
-func batch(values <-chan request, maxItems int, maxTimeout time.Duration) chan []request {
-	batches := make(chan []request)
+func batch[I, O any](values <-chan request[I, O], maxItems int, maxTimeout time.Duration) chan []request[I, O] {
+	batches := make(chan []request[I, O])
 
-	go func(batches chan []request) {
+	go func(batches chan []request[I, O]) {
 		defer close(batches)
 
 		for keepGoing := true; keepGoing; {
-			var batch []request
+			var batch []request[I, O]
 			expire := time.After(maxTimeout)
 			for {
 				select {

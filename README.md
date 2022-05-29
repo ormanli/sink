@@ -19,13 +19,13 @@ Install using go modules
 ### Configuration
 
 ```go
-cfg := sink.Config{
+cfg := sink.Config[int, int]{
     MaxItemsForBatching:   10, // Maximum number of items to batch inputs, mandatory, can't be less than 1.
     MaxTimeoutForBatching: 10 * time.Millisecond, // Maximum time to wait for inputs, mandatory, can't be less than 1 millisecond.
     AddPoolSize:           10, // Add operation goroutine pool size, mandatory, can't be less than 1.
     CallbackPoolSize:      10, // Callback operation goroutine pool size, mandatory, can't be less than 1.
     ExpensivePoolSize:     10, // Expensive operation goroutine pool size, mandatory, can't be less than 1.
-    ExpensiveOperation: func(i []interface{}) ([]interface{}, error) {
+    ExpensiveOperation: func(i []int) ([]int, error) {
         time.Sleep(time.Second)
 
         return i, nil
@@ -41,7 +41,7 @@ Sink will either wait until MaxItemsForBatching of items to arrive or wait until
 Processes given inputs by provided configuration. When it is no longer required, stop sink by calling `Close` method.
 
 ```go
-s, err := sink.NewSink(cfg)
+s, err := sink.NewSink[dummy, dummy](cfg)
 defer s.Close()
 
 _, err = s.Add(dummy{i: 10})
@@ -53,7 +53,7 @@ Processes given inputs by provided configuration. It will run until the given co
 
 ```go
 ctx, cncl := context.WithCancel(context.Background())
-s, err := sink.NewSinkWithContext(ctx, cfg)
+s, err := sink.NewSinkWithContext[dummy, dummy](ctx, cfg)
 defer cncl()
 
 _, err = s.Add(dummy{i: 10})

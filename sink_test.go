@@ -14,8 +14,8 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-type Operation interface {
-	Op([]interface{}) ([]interface{}, error)
+type Operation[I, O any] interface {
+	Op(I) (O, error)
 }
 
 type dummy struct {
@@ -27,15 +27,15 @@ func Test_100ItemsIn10Batches(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	op := NewMockOperation(ctrl)
+	op := NewMockOperation[[]dummy, []dummy](ctrl)
 	op.EXPECT().
 		Op(gomock.Len(10)).
 		Times(10).
-		DoAndReturn(func(i []interface{}) ([]interface{}, error) {
+		DoAndReturn(func(i []dummy) ([]dummy, error) {
 			return i, nil
 		})
 
-	s, err := sink.NewSink(sink.Config{
+	s, err := sink.NewSink[dummy, dummy](sink.Config[dummy, dummy]{
 		MaxItemsForBatching:   10,
 		MaxTimeoutForBatching: 10 * time.Millisecond,
 		AddPoolSize:           10,
@@ -67,14 +67,14 @@ func Test_ErrorFromExpensiveOperation(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	op := NewMockOperation(ctrl)
+	op := NewMockOperation[[]dummy, []dummy](ctrl)
 	op.EXPECT().
 		Op(gomock.Len(10)).
-		DoAndReturn(func(i []interface{}) ([]interface{}, error) {
+		DoAndReturn(func(i []dummy) ([]dummy, error) {
 			return i, errors.New("expensive operation failed")
 		})
 
-	s, err := sink.NewSink(sink.Config{
+	s, err := sink.NewSink[dummy, dummy](sink.Config[dummy, dummy]{
 		MaxItemsForBatching:   10,
 		MaxTimeoutForBatching: time.Millisecond,
 		AddPoolSize:           10,

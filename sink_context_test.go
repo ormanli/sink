@@ -18,17 +18,17 @@ func Test_100ItemsIn10BatchesWithContext(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	op := NewMockOperation(ctrl)
+	op := NewMockOperation[[]dummy, []dummy](ctrl)
 	op.EXPECT().
 		Op(gomock.Len(10)).
 		Times(10).
-		DoAndReturn(func(i []interface{}) ([]interface{}, error) {
+		DoAndReturn(func(i []dummy) ([]dummy, error) {
 			return i, nil
 		})
 
 	ctx, cncl := context.WithCancel(context.Background())
 
-	s, err := sink.NewSinkWithContext(ctx, sink.Config{
+	s, err := sink.NewSinkWithContext[dummy, dummy](ctx, sink.Config[dummy, dummy]{
 		MaxItemsForBatching:   10,
 		MaxTimeoutForBatching: 10 * time.Millisecond,
 		AddPoolSize:           10,
@@ -60,16 +60,16 @@ func Test_ErrorFromExpensiveOperationWithContext(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	op := NewMockOperation(ctrl)
+	op := NewMockOperation[[]dummy, []dummy](ctrl)
 	op.EXPECT().
 		Op(gomock.Len(10)).
-		DoAndReturn(func(i []interface{}) ([]interface{}, error) {
+		DoAndReturn(func(i []dummy) ([]dummy, error) {
 			return i, errors.New("expensive operation failed")
 		})
 
 	ctx, cncl := context.WithCancel(context.Background())
 
-	s, err := sink.NewSinkWithContext(ctx, sink.Config{
+	s, err := sink.NewSinkWithContext[dummy, dummy](ctx, sink.Config[dummy, dummy]{
 		MaxItemsForBatching:   10,
 		MaxTimeoutForBatching: time.Second,
 		AddPoolSize:           10,

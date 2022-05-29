@@ -9,8 +9,8 @@ import (
 
 // SinkWithContext is a struct to process different request simultaneously.
 //nolint:golint
-type SinkWithContext struct {
-	input         chan request
+type SinkWithContext[I, O any] struct {
+	input         chan request[I, O]
 	addPool       *ants.PoolWithFunc
 	callbackPool  *ants.PoolWithFunc
 	expensivePool *ants.PoolWithFunc
@@ -18,7 +18,7 @@ type SinkWithContext struct {
 }
 
 // NewSinkWithContext initializes a sink with the provided config and context.
-func NewSinkWithContext(ctx context.Context, config Config) (*SinkWithContext, error) {
+func NewSinkWithContext[I, O any](ctx context.Context, config Config[I, O]) (*SinkWithContext[I, O], error) {
 	err := validateConfig(config)
 	if err != nil {
 		return nil, err
@@ -28,8 +28,8 @@ func NewSinkWithContext(ctx context.Context, config Config) (*SinkWithContext, e
 		config.Logger = standardLogger{}
 	}
 
-	s := &SinkWithContext{logger: config.Logger}
-	s.input = make(chan request)
+	s := &SinkWithContext[I, O]{logger: config.Logger}
+	s.input = make(chan request[I, O])
 
 	options := []ants.Option{ants.WithLogger(config.Logger)}
 
@@ -50,7 +50,7 @@ func NewSinkWithContext(ctx context.Context, config Config) (*SinkWithContext, e
 
 	batches := batchWithContext(ctx, s.input, config.MaxItemsForBatching, config.MaxTimeoutForBatching)
 
-	go func(batches chan []request) {
+	go func(batches chan []request[I, O]) {
 		for batch := range batches {
 			err := s.expensivePool.Invoke(batch)
 			if err != nil {
@@ -73,12 +73,13 @@ func NewSinkWithContext(ctx context.Context, config Config) (*SinkWithContext, e
 }
 
 // Add adds a value to the sink and waits for result.
-func (s *SinkWithContext) Add(value interface{}) (interface{}, error) {
-	rqs := newItem(value)
+func (s *SinkWithContext[I, O]) Add(value I) (O, error) {
+	rqs := newItem[I, O](value)
 
 	err := s.addPool.Invoke(rqs)
 	if err != nil {
-		return nil, err
+		var result O
+		return result, err
 	}
 
 	rsp := <-rqs.callback
@@ -86,25 +87,25 @@ func (s *SinkWithContext) Add(value interface{}) (interface{}, error) {
 	return rsp.value, rsp.err
 }
 
-func (s *SinkWithContext) addFunc(i interface{}) {
-	rq := i.(request)
+func (s *SinkWithContext[I, O]) addFunc(i interface{}) {
+	rq := i.(request[I, O])
 
 	s.input <- rq
 }
 
-func (s *SinkWithContext) callbackFunc(i interface{}) {
-	drsp := i.(response)
+func (s *SinkWithContext[I, O]) callbackFunc(i interface{}) {
+	drsp := i.(response[O])
 
 	drsp.callback <- drsp
 
 	close(drsp.callback)
 }
 
-func (s *SinkWithContext) expensiveWrapper(f expensiveOperation) func(i interface{}) {
+func (s *SinkWithContext[I, O]) expensiveWrapper(f expensiveOperation[I, O]) func(i interface{}) {
 	return func(i interface{}) {
-		batch := i.([]request)
+		batch := i.([]request[I, O])
 
-		values := make([]interface{}, len(batch))
+		values := make([]I, len(batch))
 		for k := range values {
 			values[k] = batch[k].value
 		}
@@ -112,7 +113,7 @@ func (s *SinkWithContext) expensiveWrapper(f expensiveOperation) func(i interfac
 		responses, err := f(values)
 
 		for k := range responses {
-			r := response{
+			r := response[O]{
 				callback: batch[k].callback,
 			}
 
@@ -130,14 +131,14 @@ func (s *SinkWithContext) expensiveWrapper(f expensiveOperation) func(i interfac
 	}
 }
 
-func batchWithContext(ctx context.Context, values <-chan request, maxItems int, maxTimeout time.Duration) chan []request {
-	batches := make(chan []request)
+func batchWithContext[I, O any](ctx context.Context, values <-chan request[I, O], maxItems int, maxTimeout time.Duration) chan []request[I, O] {
+	batches := make(chan []request[I, O])
 
 	go func() {
 		defer close(batches)
 
 		for keepGoing := true; keepGoing; {
-			var batch []request
+			var batch []request[I, O]
 			expire := time.After(maxTimeout)
 			for {
 				select {

@@ -3,7 +3,7 @@ package sink
 import "time"
 
 // Config holds configuration for the sink.
-type Config struct {
+type Config[I, O any] struct {
 	MaxItemsForBatching   int
 	MaxTimeoutForBatching time.Duration
 
@@ -12,10 +12,10 @@ type Config struct {
 	AddPoolSize        int
 	CallbackPoolSize   int
 	ExpensivePoolSize  int
-	ExpensiveOperation expensiveOperation
+	ExpensiveOperation expensiveOperation[I, O]
 }
 
-func validateConfig(config Config) error {
+func validateConfig[I, O any](config Config[I, O]) error {
 	if config.MaxItemsForBatching < 1 {
 		return ErrInvalidMaxItemsForBatching
 	}
